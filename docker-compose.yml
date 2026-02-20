@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: skillproof-postgres
+    environment:
+      POSTGRES_DB: skillproof_db
+      POSTGRES_USER: skillproof_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skillproof_user -d skillproof_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skillproof-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: skillproof-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - skillproof-network
+
+  backend:
+    build:
+      context: ./skillproof-backend
+      dockerfile: Dockerfile
+    container_name: skillproof-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://skillproof_user:${DB_PASSWORD:-password123}@postgres:5432/skillproof_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEBUG: "True"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./skillproof-backend:/app
+      - /app/__pycache__
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - skillproof-network
+
+  celery_worker:
+    build:
+      context: ./skillproof-backend
+      dockerfile: Dockerfile
+    container_name: skillproof-celery
+    environment:
+      DATABASE_URL: postgresql://skillproof_user:${DB_PASSWORD:-password123}@postgres:5432/skillproof_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    volumes:
+      - ./skillproof-backend:/app
+    command: celery -A app.tasks worker --loglevel=info
+    networks:
+      - skillproof-network
+
+  frontend:
+    build:
+      context: ./skillproof-frontend
+      dockerfile: Dockerfile
+    container_name: skillproof-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-nextauth-secret}
+    depends_on:
+      - backend
+    volumes:
+      - ./skillproof-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+    networks:
+      - skillproof-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  skillproof-network:
+    driver: bridge

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+skillproof-frontend/node_modules/
+skillproof-backend/__pycache__/
+skillproof-backend/**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.local
+.env.production
+skillproof-backend/.env
+skillproof-frontend/.env.local
+
+# Build outputs
+skillproof-frontend/.next/
+skillproof-frontend/out/
+skillproof-frontend/build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.pytest_cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Misc
+.cache/
+temp/
+tmp/
