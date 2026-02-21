@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, resume, ai, voice, interview
+from app.api.v1.endpoints import auth, resume, ai, voice, interview, multilingual_interview
 
 api_router = APIRouter()
 
@@ -8,3 +8,4 @@ api_router.include_router(resume.router, prefix="/resume", tags=["Resume"])
 api_router.include_router(ai.router, prefix="/ai", tags=["AI Services"])
 api_router.include_router(voice.router, prefix="/voice", tags=["Voice & Audio"])
 api_router.include_router(interview.router, prefix="/interview", tags=["Interview Management"])
+api_router.include_router(multilingual_interview.router, prefix="/multilingual", tags=["Multilingual Interview"])

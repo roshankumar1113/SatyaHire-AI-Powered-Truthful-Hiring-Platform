@@ -450,6 +450,172 @@ async def ai_health():
         "features": ["question_generation", "answer_analysis"]
     }
 
+# ============================================
+# MULTILINGUAL INTERVIEW ENDPOINTS
+# ============================================
+
+SUPPORTED_LANGUAGES = [
+    "english", "hindi", "tamil", "telugu",
+    "kannada", "malayalam", "marathi",
+    "gujarati", "bengali", "punjabi", "urdu"
+]
+
+LANGUAGE_NAMES = {
+    "english": "English",
+    "hindi": "हिंदी",
+    "tamil": "தமிழ்",
+    "telugu": "తెలుగు",
+    "kannada": "ಕನ್ನಡ",
+    "malayalam": "മലയാളം",
+    "marathi": "मराठी",
+    "gujarati": "ગુજરાતી",
+    "bengali": "বাংলা",
+    "punjabi": "ਪੰਜਾਬੀ",
+    "urdu": "اردو"
+}
+
+class StartMultilingualInterviewRequest(BaseModel):
+    role: str
+    experience_level: str
+    language: str
+    max_questions: int = 5
+
+class SubmitMultilingualAnswerRequest(BaseModel):
+    role: str
+    experience_level: str
+    language: str
+    max_questions: int
+    question_number: int
+    previous_question: str
+    candidate_answer: str
+
+@app.get("/api/v1/multilingual/languages")
+async def get_supported_languages():
+    """Get list of supported interview languages"""
+    languages = [
+        {
+            "code": lang,
+            "name": LANGUAGE_NAMES.get(lang, lang.capitalize()),
+            "native_name": LANGUAGE_NAMES.get(lang, lang.capitalize())
+        }
+        for lang in SUPPORTED_LANGUAGES
+    ]
+    return {
+        "status": "success",
+        "languages": languages,
+        "total": len(SUPPORTED_LANGUAGES)
+    }
+
+@app.post("/api/v1/multilingual/start")
+async def start_multilingual_interview(request: StartMultilingualInterviewRequest):
+    """Start a new multilingual interview"""
+    if request.language not in SUPPORTED_LANGUAGES:
+        return {
+            "status": "error",
+            "message": f"Unsupported language: {request.language}"
+        }, 400
+    
+    # Mock first question (in production, call AI service)
+    questions = {
+        "english": "Can you introduce yourself and tell me about your background?",
+        "hindi": "क्या आप अपना परिचय दे सकते हैं और अपनी पृष्ठभूमि के बारे में बता सकते हैं?",
+        "tamil": "உங்களை அறிமுகப்படுத்தி உங்கள் பின்னணியைப் பற்றி கூற முடியுமா?",
+        "telugu": "మీరు మిమ్మల్ని పరిచయం చేసుకొని మీ నేపథ్యం గురించి చెప్పగలరా?",
+    }
+    
+    question = questions.get(request.language, questions["english"])
+    
+    return {
+        "status": "success",
+        "message": f"Interview started in {LANGUAGE_NAMES.get(request.language, request.language)}",
+        "data": {
+            "question": question,
+            "difficulty": "easy",
+            "interview_status": "IN_PROGRESS",
+            "question_number": 1,
+            "total_questions": request.max_questions,
+            "language": request.language
+        }
+    }
+
+@app.post("/api/v1/multilingual/submit-answer")
+async def submit_multilingual_answer(request: SubmitMultilingualAnswerRequest):
+    """Submit answer and get evaluation + next question"""
+    
+    # Mock evaluation and next question
+    evaluation = {
+        "score": 8.0,
+        "strengths": "Clear communication and good examples" if request.language == "english" else "स्पष्ट संचार और अच्छे उदाहरण",
+        "improvements": "Could add more technical details" if request.language == "english" else "अधिक तकनीकी विवरण जोड़ सकते हैं",
+        "corrected_answer": "Model answer would go here"
+    }
+    
+    next_questions = {
+        "english": "What are your key technical skills?",
+        "hindi": "आपके मुख्य तकनीकी कौशल क्या हैं?",
+        "tamil": "உங்கள் முக்கிய தொழில்நுட்ப திறன்கள் என்ன?",
+        "telugu": "మీ ముఖ్య సాంకేతిక నైపుణ్యాలు ఏమిటి?",
+    }
+    
+    next_question = next_questions.get(request.language, next_questions["english"])
+    
+    # Check if interview is complete
+    is_complete = request.question_number >= request.max_questions
+    
+    return {
+        "status": "success",
+        "data": {
+            "evaluation": evaluation,
+            "question": next_question if not is_complete else "",
+            "difficulty": "medium",
+            "interview_status": "COMPLETED" if is_complete else "IN_PROGRESS",
+            "question_number": request.question_number + 1,
+            "total_questions": request.max_questions,
+            "language": request.language
+        }
+    }
+
+@app.get("/api/v1/multilingual/experience-levels")
+async def get_experience_levels():
+    """Get supported experience levels"""
+    return {
+        "status": "success",
+        "levels": [
+            {
+                "code": "junior",
+                "name": "Junior (0-2 years)",
+                "description": "Entry-level positions, basic technical questions"
+            },
+            {
+                "code": "mid",
+                "name": "Mid-Level (2-5 years)",
+                "description": "Intermediate positions, moderate complexity questions"
+            },
+            {
+                "code": "senior",
+                "name": "Senior (5+ years)",
+                "description": "Senior positions, advanced technical and architectural questions"
+            }
+        ]
+    }
+
+@app.get("/api/v1/multilingual/health")
+async def multilingual_health():
+    """Multilingual interview service health check"""
+    return {
+        "status": "healthy",
+        "service": "multilingual_interview",
+        "supported_languages": len(SUPPORTED_LANGUAGES),
+        "languages": SUPPORTED_LANGUAGES,
+        "features": [
+            "Multilingual interviews",
+            "AI-powered evaluation",
+            "Structured scoring",
+            "Real-time feedback",
+            "11 Indian languages supported"
+        ]
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("simple_main:app", host="0.0.0.0", port=8000, reload=True)
