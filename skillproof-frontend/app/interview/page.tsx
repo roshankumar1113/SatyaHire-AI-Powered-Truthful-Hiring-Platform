@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Mic, MicOff, Video, VideoOff, MessageSquare, CheckCircle, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Camera, Mic, MicOff, Video, VideoOff, MessageSquare, CheckCircle, AlertCircle, Loader2, ArrowRight, Volume2, VolumeX } from 'lucide-react';
 
 export default function AIInterviewPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
@@ -17,6 +20,9 @@ export default function AIInterviewPage() {
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   const questions = [

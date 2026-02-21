@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: skillproof-postgres
@@ -20,9 +21,11 @@ services:
     networks:
       - skillproof-network
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: skillproof-redis
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -35,6 +38,27 @@ services:
     networks:
       - skillproof-network
 
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: skillproof-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-skillproof}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - skillproof-network
+
+  # Backend Service (Python FastAPI)
   backend:
     build:
       context: ./skillproof-backend
@@ -45,40 +69,29 @@ services:
     environment:
       DATABASE_URL: postgresql://skillproof_user:${DB_PASSWORD:-password123}@postgres:5432/skillproof_db
       REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-skillproof}:${RABBITMQ_PASSWORD:-rabbitmq123}@rabbitmq:5672/
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-jwt-secret-key-min-32-chars}
+      OPENAI_API_KEYS: ${OPENAI_API_KEYS:-}
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+      ANTHROPIC_API_KEYS: ${ANTHROPIC_API_KEYS:-}
       DEBUG: "True"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - ./skillproof-backend:/app
-      - /app/__pycache__
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - backend_uploads:/app/uploads
+    command: uvicorn simple_main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - skillproof-network
+    restart: unless-stopped
 
-  celery_worker:
-    build:
-      context: ./skillproof-backend
-      dockerfile: Dockerfile
-    container_name: skillproof-celery
-    environment:
-      DATABASE_URL: postgresql://skillproof_user:${DB_PASSWORD:-password123}@postgres:5432/skillproof_db
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-    depends_on:
-      - postgres
-      - redis
-      - backend
-    volumes:
-      - ./skillproof-backend:/app
-    command: celery -A app.tasks worker --loglevel=info
-    networks:
-      - skillproof-network
-
+  # Frontend Service (Next.js)
   frontend:
     build:
       context: ./skillproof-frontend
@@ -87,7 +100,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-nextauth-secret}
     depends_on:
@@ -99,10 +113,35 @@ services:
     command: npm run dev
     networks:
       - skillproof-network
+    restart: unless-stopped
+
+  # Minio (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: skillproof-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - skillproof-network
 
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
+  minio_data:
+  backend_uploads:
 
 networks:
   skillproof-network:
