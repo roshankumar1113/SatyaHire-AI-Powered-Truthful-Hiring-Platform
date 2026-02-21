@@ -15,6 +15,9 @@ export default function AIInterviewPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef<any>(null);
 
   const questions = [
     "Hello! I'm your AI interviewer. Can you please introduce yourself and tell me about your background?",
@@ -25,9 +28,37 @@ export default function AIInterviewPage() {
   ];
 
   useEffect(() => {
+    // Initialize speech recognition
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setTranscript(prev => prev + ' ' + finalTranscript);
+        }
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+    }
+    
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
     };
   }, [stream]);
@@ -59,16 +90,6 @@ export default function AIInterviewPage() {
     }
   };
 
-  const toggleCamera = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCameraOn(videoTrack.enabled);
-      }
-    }
-  };
-
   const toggleMic = () => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0];
@@ -95,19 +116,52 @@ export default function AIInterviewPage() {
     setAiResponse(question);
     setIsAiSpeaking(true);
     
-    // Simulate AI speaking (in production, use Web Speech API or TTS service)
-    setTimeout(() => {
-      setIsAiSpeaking(false);
-    }, 3000);
+    // Use Web Speech API for text-to-speech
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(question);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      utterance.onend = () => {
+        setIsAiSpeaking(false);
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Fallback: just show text
+      setTimeout(() => {
+        setIsAiSpeaking(false);
+      }, 3000);
+    }
   };
 
   const startRecording = () => {
     setIsRecording(true);
-    // In production, implement actual recording logic
+    setTranscript('');
+    
+    // Start speech recognition
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+      }
+    }
   };
 
   const stopRecording = () => {
     setIsRecording(false);
+    setIsListening(false);
+    
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    
+    // Process the transcript
+    console.log('Answer transcript:', transcript);
     
     // Simulate processing answer
     setTimeout(() => {
@@ -185,9 +239,21 @@ export default function AIInterviewPage() {
 
                 {/* AI Speaking Indicator */}
                 {isAiSpeaking && (
-                  <div className="absolute top-4 right-4 flex items-center gap-2 bg-purple-500 px-3 py-1 rounded-full">
-                    <MessageSquare className="w-4 h-4 text-white animate-pulse" />
+                  <div className="absolute top-4 right-4 flex items-center gap-2 bg-purple-500 px-3 py-1 rounded-full animate-pulse">
+                    <MessageSquare className="w-4 h-4 text-white" />
                     <span className="text-white text-sm font-semibold">AI Speaking</span>
+                  </div>
+                )}
+
+                {/* Listening Indicator */}
+                {isListening && (
+                  <div className="absolute top-16 right-4 flex items-center gap-2 bg-green-500 px-3 py-1 rounded-full">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-4 bg-white rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1 h-4 bg-white rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1 h-4 bg-white rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-white text-sm font-semibold">Listening...</span>
                   </div>
                 )}
 
@@ -306,6 +372,30 @@ export default function AIInterviewPage() {
                 </p>
               )}
             </div>
+
+            {/* Your Answer Transcript */}
+            {(isRecording || transcript) && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Mic className="h-5 w-5 text-green-400" />
+                  <h3 className="text-lg font-semibold text-white">Your Answer</h3>
+                </div>
+                
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 min-h-[100px]">
+                  {transcript ? (
+                    <p className="text-white leading-relaxed">{transcript}</p>
+                  ) : (
+                    <p className="text-gray-400 italic">Start speaking...</p>
+                  )}
+                  {isListening && (
+                    <div className="flex items-center gap-2 mt-3 text-green-300 text-sm">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span>Listening to your answer...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Instructions */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">

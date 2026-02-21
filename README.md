@@ -12,26 +12,20 @@
 ## 🌟 Features
 
 ### ✅ Live Now
-- **AI Interview Agent** - Live video interviews conducted by AI with natural conversation flow
+- **AI Voice Interview** - Real-time voice interview with Text-to-Speech and Speech-to-Text
+- **AI API Key Management** - Multi-provider support (OpenAI, Gemini, Claude) with automatic rotation
 - **Authentication System** - Secure JWT-based auth with role-based access (Company/Candidate)
 - **AI Resume Parser** - Extract skills from PDF/DOCX with 85% accuracy (200+ skills taxonomy)
 - **Beautiful UI** - Modern gradient design with Tailwind CSS
-- **Fraud Detection Ready** - Tab switching detection, camera monitoring
-
-### 🚧 Coming Soon
-- Resume upload system
-- Advanced fraud detection
-- AI test generation
-- Analytics dashboard
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- PostgreSQL 14+
 - Python 3.9+
 - Node.js 18+
+- PostgreSQL 14+ (optional - can use simple backend without DB)
 
 ### 1. Clone Repository
 ```bash
@@ -39,58 +33,89 @@ git clone https://github.com/roshankumar1113/SatyaHire-AI-Powered-Truthful-Hirin
 cd SatyaHire-AI-Powered-Truthful-Hiring-Platform
 ```
 
-### 2. Backend Setup
+### 2. Backend Setup (Simple - No Database)
 ```bash
 cd skillproof-backend
-
-# Create .env file
-cat > .env << EOF
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skillproof
-SECRET_KEY=your-super-secret-key-change-in-production-min-32-characters
-DEBUG=True
-EOF
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create database
-createdb skillproof
-
-# Create tables
-python -c "from app.database import Base, engine; from app.models.user import User; from app.models.company import Company; Base.metadata.create_all(bind=engine)"
-
-# Start server
-uvicorn app.main:app --reload
+# Start simple backend (no database required)
+python -m uvicorn simple_main:app --reload
 ```
+
+Backend will run on http://localhost:8000
 
 ### 3. Frontend Setup
 ```bash
 cd skillproof-frontend
 
-# Create .env.local
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1" > .env.local
-
 # Install dependencies
 npm install
 
-# Start server
+# Start frontend
 npm run dev
 ```
 
-### 4. Access Application
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8000/api/docs
+Frontend will run on http://localhost:3000
+
+### 4. One-Click Start (Windows)
+```bash
+# Just double-click:
+START.bat
+```
+
+---
+
+## 🔑 AI API Keys Setup (Optional)
+
+To enable AI features (interview questions, answer analysis):
+
+### Step 1: Get API Keys
+- **OpenAI:** https://platform.openai.com/api-keys
+- **Gemini:** https://makersuite.google.com/app/apikey (optional)
+- **Claude:** https://console.anthropic.com/ (optional)
+
+### Step 2: Create .env File
+Create `skillproof-backend/.env`:
+```bash
+# AI API Keys (comma-separated for rotation)
+OPENAI_API_KEYS=sk-key1,sk-key2,sk-key3
+GEMINI_API_KEYS=gemini-key1,gemini-key2
+ANTHROPIC_API_KEYS=claude-key1,claude-key2
+
+# AI Configuration
+DEFAULT_AI_PROVIDER=openai
+AI_MODEL=gpt-3.5-turbo
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=1000
+
+# Security
+SECRET_KEY=your-super-secret-key-change-in-production-min-32-characters
+DEBUG=True
+```
+
+### Step 3: Install AI Packages
+```bash
+cd skillproof-backend
+pip install openai google-generativeai anthropic
+```
+
+### Step 4: Test AI
+```bash
+python test_ai_client.py
+```
 
 ---
 
 ## 🎯 How It Works
 
 ### For Candidates
-1. Sign up as Candidate
+1. Sign up at http://localhost:3000/signup
 2. Redirected to AI Interview
 3. Enable camera & microphone
-4. AI asks 5 questions
-5. Record your answers
+4. AI speaks questions (Text-to-Speech)
+5. Answer with voice (Speech-to-Text)
 6. Get instant feedback
 
 ### For Companies
@@ -102,28 +127,93 @@ npm run dev
 
 ---
 
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/signup` | Create account |
+| POST | `/api/v1/auth/login` | Login |
+| GET | `/api/v1/auth/me` | Get user info |
+| POST | `/api/v1/resume/parse` | Parse resume |
+| POST | `/api/v1/ai/generate-question` | Generate interview question |
+| POST | `/api/v1/ai/analyze-answer` | Analyze candidate answer |
+| GET | `/api/v1/ai/health` | Check AI status |
+
+Full API docs: http://localhost:8000/api/docs
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend
 - **Framework:** Next.js 14 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
-- **State:** React Context API
-- **HTTP:** Axios
+- **Icons:** Lucide React
+- **Voice:** Web Speech API
 
 ### Backend
 - **Framework:** FastAPI
 - **Language:** Python 3.9+
-- **Database:** PostgreSQL
-- **ORM:** SQLAlchemy
+- **Database:** PostgreSQL (optional)
 - **Auth:** JWT (python-jose)
 - **Security:** Bcrypt
 
 ### AI/ML
+- **Providers:** OpenAI, Gemini, Anthropic
 - **NLP:** spaCy
 - **ML:** scikit-learn
 - **Documents:** PyPDF2, python-docx
-- **Embeddings:** Sentence Transformers
+
+---
+
+## 🎤 Voice Interview Features
+
+### Text-to-Speech (AI Voice)
+- AI speaks questions naturally
+- Adjustable rate, pitch, volume
+- Visual "AI Speaking" indicator
+
+### Speech-to-Text (Your Voice)
+- Real-time speech recognition
+- Live transcript display
+- Continuous listening
+- Visual "Listening..." indicator
+
+### Browser Support
+- ✅ Chrome/Edge: Full support
+- ✅ Safari: Good support
+- ⚠️ Firefox: Limited support
+
+---
+
+## 🤖 AI Key Management Features
+
+### Round-Robin Rotation
+```
+Request 1 → Key 1
+Request 2 → Key 2
+Request 3 → Key 3
+Request 4 → Key 1 (cycles back)
+```
+
+### Automatic Fallback
+```
+Try Key 1 → Failed
+Try Key 2 → Success ✓
+```
+
+### Provider Fallback
+```
+Try OpenAI → Failed
+Try Gemini → Success ✓
+```
+
+### Features
+✅ Multiple keys per provider
+✅ Thread-safe operations
+✅ Automatic retry
+✅ Secure (keys never logged)
 
 ---
 
@@ -136,7 +226,9 @@ SatyaHire/
 │   │   ├── api/v1/         # API endpoints
 │   │   ├── models/         # Database models
 │   │   ├── ml/             # AI/ML modules
-│   │   └── main.py
+│   │   ├── utils/          # Utilities
+│   │   └── main.py         # Main app
+│   ├── simple_main.py      # Simple backend (no DB)
 │   └── requirements.txt
 │
 ├── skillproof-frontend/    # Next.js frontend
@@ -147,22 +239,10 @@ SatyaHire/
 │   │   └── page.tsx        # Landing
 │   └── package.json
 │
-├── README.md
+├── START.bat               # One-click start
+├── README.md               # This file
 └── DOCS.md                 # Complete documentation
 ```
-
----
-
-## 🔐 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/signup` | Create account |
-| POST | `/api/v1/auth/login` | Login |
-| GET | `/api/v1/auth/me` | Get user info |
-| POST | `/api/v1/resume/parse` | Parse resume |
-
-Full API docs: http://localhost:8000/api/docs
 
 ---
 
@@ -177,36 +257,59 @@ http://localhost:3000/signup
 Email: test@example.com
 Password: password123
 Role: Candidate
-
-# Auto-redirected to AI Interview
 ```
+
+### Test AI Interview
+1. Create candidate account
+2. Auto-redirected to interview
+3. Enable camera/microphone
+4. Click "Start Interview"
+5. AI speaks question
+6. Answer with voice
+7. See transcript in real-time
 
 ### Test API
 ```bash
+# Health check
 curl http://localhost:8000/health
+
+# AI health check
+curl http://localhost:8000/api/v1/ai/health
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Backend Issues
+### Backend won't start
 ```bash
-# Database error
-createdb skillproof
+# Check Python version
+python --version  # Should be 3.9+
 
-# Module not found
+# Install dependencies
+cd skillproof-backend
 pip install -r requirements.txt
 ```
 
-### Frontend Issues
+### Frontend won't start
 ```bash
-# Module not found
+# Install dependencies
+cd skillproof-frontend
 npm install
 
-# Port in use
-npx kill-port 3000
+# Start
+npm run dev
 ```
+
+### Voice not working
+- Use Chrome or Edge browser
+- Allow microphone permissions
+- Check speakers are unmuted
+
+### AI not working
+- Add API keys to `.env` file
+- Install AI packages: `pip install openai`
+- Test: `python test_ai_client.py`
 
 ---
 
@@ -215,13 +318,14 @@ npx kill-port 3000
 | Feature | Status | Progress |
 |---------|--------|----------|
 | Authentication | ✅ | 100% |
-| AI Interview | ✅ | 100% |
+| AI Voice Interview | ✅ | 100% |
+| AI Key Management | ✅ | 100% |
 | Resume Parser | ✅ | 100% |
-| Resume Upload | 🚧 | 50% |
-| Fraud Detection | 📋 | 0% |
-| AI Tests | 📋 | 0% |
+| Landing Page | ✅ | 100% |
+| Dashboard | 🚧 | 50% |
+| Company Portal | 📋 | 0% |
 
-**Overall: 40% Complete**
+**Overall: 70% Complete**
 
 ---
 
@@ -229,27 +333,22 @@ npx kill-port 3000
 
 ### Phase 1: Core Features ✅
 - [x] Authentication system
-- [x] AI Interview Agent
+- [x] AI Voice Interview
+- [x] AI Key Management
 - [x] Resume parser
 - [x] Landing page
 
-### Phase 2: Resume System 🚧
-- [ ] File upload
-- [ ] Resume storage
-- [ ] Parse on upload
-- [ ] Display parsed data
+### Phase 2: Advanced Features 🚧
+- [ ] Resume upload UI
+- [ ] Dashboard features
+- [ ] Company portal
+- [ ] Interview history
 
-### Phase 3: Advanced Features 📋
-- [ ] Camera monitoring
+### Phase 3: Production 📋
 - [ ] Fraud detection
 - [ ] AI test generation
 - [ ] Analytics dashboard
-
-### Phase 4: Production 📋
 - [ ] AWS deployment
-- [ ] CI/CD pipeline
-- [ ] Monitoring
-- [ ] Scaling
 
 ---
 
@@ -276,15 +375,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Roshan Kumar**
 - GitHub: [@roshankumar1113](https://github.com/roshankumar1113)
 - Repository: [SatyaHire](https://github.com/roshankumar1113/SatyaHire-AI-Powered-Truthful-Hiring-Platform)
-
----
-
-## 🙏 Acknowledgments
-
-- Next.js team for the amazing framework
-- FastAPI for the high-performance backend
-- spaCy for NLP capabilities
-- All open-source contributors
 
 ---
 

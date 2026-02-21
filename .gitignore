@@ -3,6 +3,8 @@ node_modules/
 skillproof-frontend/node_modules/
 skillproof-backend/__pycache__/
 skillproof-backend/**/__pycache__/
+skillproof-backend/venv/
+venv/
 *.pyc
 *.pyo
 *.pyd

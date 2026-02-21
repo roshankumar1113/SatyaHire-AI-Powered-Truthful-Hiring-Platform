@@ -28,7 +28,13 @@ scikit-learn==1.4.0
 numpy==1.26.3
 pandas==2.1.4
 sentence-transformers==2.3.1
-openai==1.10.0
+
+# AI Providers (Multiple provider support)
+openai==1.10.0                    # OpenAI GPT models
+google-generativeai==0.3.2        # Google Gemini
+anthropic==0.8.1                  # Anthropic Claude
+
+# AI Frameworks
 langchain==0.1.4
 
 # PDF/Document Processing

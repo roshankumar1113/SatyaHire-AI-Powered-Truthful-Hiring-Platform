@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, resume
+from app.api.v1.endpoints import auth, resume, ai
 
 api_router = APIRouter()
 
-api_router.include_router(auth.router, tags=["Authentication"])
-api_router.include_router(resume.router, tags=["Resume"])
+api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(resume.router, prefix="/resume", tags=["Resume"])
+api_router.include_router(ai.router, prefix="/ai", tags=["AI Services"])
